@@ -3,10 +3,88 @@ title: "analysis"
 author: "Jon Ehrenberg"
 date: "2023-10-01"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+
+Load packages
+```{r message=FALSE, warning=FALSE}
+library(raster)
+library(habtools)
+library(rgdal)
+library(plot3D)
+```
+
+Load data
+```{r}
+dem1_s <- raster("data/Bommie_1_South.tif")
+dem2_s <- raster("data/Bommie_2_South.tif")
+dem3_s <- raster("data/Bommie_3_South.tif")
+dem4_s <- raster("data/Bommie_4_South.tif")
+dem5_s <- raster("data/Bommie_5_South.tif")
+dem6_s <- raster("data/Bommie_6_South.tif")
+dem7_s <- raster("data/Bommie_7_South.tif")
+dem8_s <- raster("data/Bommie_8_South.tif")
+dem9_s <- raster("data/Bommie_9_South.tif")
+dem10_s <- raster("data/Bommie_10_South.tif")
+dem11_s <- raster("data/Bommie_11_South.tif")
+dem12_s <- raster("data/Bommie_12_South.tif")
+dem13_s <- raster("data/Bommie_13_South.tif")
+dem14_s <- raster("data/Bommie_14_South.tif")
+dem15_s <- raster("data/Bommie_15_South.tif")
+dem16_s <- raster("data/Bommie_16_South.tif")
+dem17_s <- raster("data/Bommie_17_South.tif")
+dem18_s <- raster("data/Bommie_18_South.tif")
+dem19_s <- raster("data/Bommie_19_South.tif")
+dem20_s <- raster("data/Bommie_20_South.tif")
+dem21_s <- raster("data/Bommie_21_South.tif")
+dem22_s <- raster("data/Bommie_22_South.tif")
+dem23_s <- raster("data/Bommie_23_South.tif")
+dem24_s <- raster("data/Bommie_24_South.tif")
+dem25_s <- raster("data/Bommie_25_South.tif")
+dem26_s <- raster("data/Bommie_26_South.tif")
+dem27_s <- raster("data/Bommie_27_South.tif")
+dem28_s <- raster("data/Bommie_28_South.tif")
+dem29_s <- raster("data/Bommie_29_South.tif")
+dem30_s <- raster("data/Bommie_30_South.tif")
+dem31_s <- raster("data/Bommie_31_South.tif")
+dem32_s <- raster("data/Bommie_32_South.tif")
+dem33_s <- raster("data/Bommie_33_South.tif")
+dem34_s <- raster("data/Bommie_34_South.tif")
+dem35_s <- raster("data/Bommie_35_South.tif")
+dem36_s <- raster("data/Bommie_36_South.tif")
+```
+
+Plot some dems
+```{r}
+plot(dem1_s)
+plot(dem20_s)
+plot(dem22_s)
+plot(dem15_s)
+plot(dem31_s)
+```
+
+Looks decent, check resolution
+```{r}
+res(dem1_s)
+res(dem20_s)
+res(dem22_s)
+res(dem15_s)
+res(dem31_s)
+```
+
+Calculate RDH for all dems
+```{r}
+comp1_S <- rdh(dem1_s, lvec = c(0.125, 0.25, 0.5, 1, 2))
+
+
+```
+
+
 
 
