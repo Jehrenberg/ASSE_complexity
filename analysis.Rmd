@@ -18,6 +18,7 @@ library(raster)
 library(habtools)
 library(rgdal)
 library(plot3D)
+library(dplyr)
 ```
 
 Load data
@@ -80,10 +81,60 @@ res(dem31_s)
 
 Calculate RDH for all dems
 ```{r}
-comp1_S <- rdh(dem1_s, lvec = c(0.125, 0.25, 0.5, 1, 2))
 
+#get folder path with rasters
+path <- "C:/Users/Jgke8/ASSE_complexity/data/dems/"
 
+#list all files
+files <- list.files(path, pattern = "tif$", full.names = TRUE)
+
+#create empty dataframe to be filled in with RDH values
+S_lagoon <- data.frame()
+
+#for loop
+for (f in files){
+  #load one raster
+  r <- raster(f)
+  #calculate RDH
+  habcomp <- rdh(r, lvec = c(0.0625, 0.125, 0.25, 0.5, 1, 2))
+  #get file name
+  ID <- tools::file_path_sans_ext(f)
+  #add file name to habcomp data frame
+  habcomp <- habcomp %>% mutate(ID = ID)
+  #add values to data frame
+  S_lagoon <- rbind(S_lagoon, data.frame(ID=habcomp$ID, R=habcomp$R, D=habcomp$D, H=habcomp$H))
+}
+
+S_lagoon
 ```
+
+Clean up S_lagoon
+```{r}
+S_lagoon$ID <- gsub("C:/Users/Jgke8/ASSE_complexity/data/dems/", "", S_lagoon$ID)
+S_lagoon$ID <- gsub("Bommie_", "", S_lagoon$ID)
+```
+
+Bin the bommies into high and low complexity
+```{r}
+#get mean fractal dimension to use as boundary for binning
+summary(S_lagoon$D)
+
+
+S_lagoon <- within(S_lagoon, {
+  label <- NA
+  label[D < 2.746]           <- "L"
+  label[D > 2.746] <- "H"
+  
+})
+```
+
+
+```{r}
+write.csv(S_lagoon, file = "output/S_lagoon_comp.csv")
+```
+
+
+
 
 
 
