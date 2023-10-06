@@ -19,80 +19,23 @@ library(habtools)
 library(rgdal)
 library(plot3D)
 library(dplyr)
+library(tidyverse)
 ```
 
-Load data
-```{r}
-dem1_s <- raster("data/Bommie_1_South.tif")
-dem2_s <- raster("data/Bommie_2_South.tif")
-dem3_s <- raster("data/Bommie_3_South.tif")
-dem4_s <- raster("data/Bommie_4_South.tif")
-dem5_s <- raster("data/Bommie_5_South.tif")
-dem6_s <- raster("data/Bommie_6_South.tif")
-dem7_s <- raster("data/Bommie_7_South.tif")
-dem8_s <- raster("data/Bommie_8_South.tif")
-dem9_s <- raster("data/Bommie_9_South.tif")
-dem10_s <- raster("data/Bommie_10_South.tif")
-dem11_s <- raster("data/Bommie_11_South.tif")
-dem12_s <- raster("data/Bommie_12_South.tif")
-dem13_s <- raster("data/Bommie_13_South.tif")
-dem14_s <- raster("data/Bommie_14_South.tif")
-dem15_s <- raster("data/Bommie_15_South.tif")
-dem16_s <- raster("data/Bommie_16_South.tif")
-dem17_s <- raster("data/Bommie_17_South.tif")
-dem18_s <- raster("data/Bommie_18_South.tif")
-dem19_s <- raster("data/Bommie_19_South.tif")
-dem20_s <- raster("data/Bommie_20_South.tif")
-dem21_s <- raster("data/Bommie_21_South.tif")
-dem22_s <- raster("data/Bommie_22_South.tif")
-dem23_s <- raster("data/Bommie_23_South.tif")
-dem24_s <- raster("data/Bommie_24_South.tif")
-dem25_s <- raster("data/Bommie_25_South.tif")
-dem26_s <- raster("data/Bommie_26_South.tif")
-dem27_s <- raster("data/Bommie_27_South.tif")
-dem28_s <- raster("data/Bommie_28_South.tif")
-dem29_s <- raster("data/Bommie_29_South.tif")
-dem30_s <- raster("data/Bommie_30_South.tif")
-dem31_s <- raster("data/Bommie_31_South.tif")
-dem32_s <- raster("data/Bommie_32_South.tif")
-dem33_s <- raster("data/Bommie_33_South.tif")
-dem34_s <- raster("data/Bommie_34_South.tif")
-dem35_s <- raster("data/Bommie_35_South.tif")
-dem36_s <- raster("data/Bommie_36_South.tif")
-```
-
-Plot some dems
-```{r}
-plot(dem1_s)
-plot(dem20_s)
-plot(dem22_s)
-plot(dem15_s)
-plot(dem31_s)
-```
-
-Looks decent, check resolution
-```{r}
-res(dem1_s)
-res(dem20_s)
-res(dem22_s)
-res(dem15_s)
-res(dem31_s)
-```
-
-Calculate RDH for all dems
+Calculate RDH for South dems
 ```{r}
 
 #get folder path with rasters
-path <- "C:/Users/Jgke8/ASSE_complexity/data/dems/"
+path_s <- "C:/Users/Jgke8/ASSE_complexity/data/dems/South/"
 
 #list all files
-files <- list.files(path, pattern = "tif$", full.names = TRUE)
+files_s <- list.files(path_s, pattern = "tif$", full.names = TRUE)
 
 #create empty dataframe to be filled in with RDH values
 S_lagoon <- data.frame()
 
 #for loop
-for (f in files){
+for (f in files_s){
   #load one raster
   r <- raster(f)
   #calculate RDH
@@ -110,29 +53,187 @@ S_lagoon
 
 Clean up S_lagoon
 ```{r}
-S_lagoon$ID <- gsub("C:/Users/Jgke8/ASSE_complexity/data/dems/", "", S_lagoon$ID)
+S_lagoon$ID <- gsub("C:/Users/Jgke8/ASSE_complexity/data/dems/South/", "", S_lagoon$ID)
 S_lagoon$ID <- gsub("Bommie_", "", S_lagoon$ID)
 ```
+
+Calculate RDH for North dems
+```{r}
+
+#get folder path with rasters
+path_n <- "C:/Users/Jgke8/ASSE_complexity/data/dems/North/"
+
+#list all files
+files_n <- list.files(path_n, pattern = "tif$", full.names = TRUE)
+
+#create empty dataframe to be filled in with RDH values
+N_lagoon <- data.frame()
+
+#for loop
+for (f in files_n){
+  #load one raster
+  r <- raster(f)
+  #calculate RDH
+  habcomp <- rdh(r, lvec = c(0.0625, 0.125, 0.25, 0.5, 1, 2))
+  #get file name
+  ID <- tools::file_path_sans_ext(f)
+  #add file name to habcomp data frame
+  habcomp <- habcomp %>% mutate(ID = ID)
+  #add values to data frame
+  N_lagoon <- rbind(N_lagoon, data.frame(ID=habcomp$ID, R=habcomp$R, D=habcomp$D, H=habcomp$H))
+}
+
+```
+
+Clean up N_lagoon
+```{r}
+N_lagoon$ID <- gsub("C:/Users/Jgke8/ASSE_complexity/data/dems/North/", "", N_lagoon$ID)
+N_lagoon$ID <- gsub("Bommie_", "", N_lagoon$ID)
+```
+
+Make full data frame
+```{r}
+All_data <- rbind(N_lagoon, S_lagoon)
+
+summary(All_data)
+
+```
+
 
 Bin the bommies into high and low complexity
 ```{r}
 #get mean fractal dimension to use as boundary for binning
-summary(S_lagoon$D)
+summary(All_data$D)
 
 
-S_lagoon <- within(S_lagoon, {
-  label <- NA
-  label[D < 2.746]           <- "L"
-  label[D > 2.746] <- "H"
+All_data <- within(All_data, {
+  complexity.D <- NA
+  complexity.D[D < 2.765]           <- "L"
+  complexity.D[D > 2.765] <- "H"
   
 })
 ```
 
-
+Label each bommie based on survey area
 ```{r}
-write.csv(S_lagoon, file = "output/S_lagoon_comp.csv")
+library(quadcleanR)
+
+All_data <- categorize(data = All_data, column = "ID", values = c("North", "South"), name = "Location", binary = FALSE, categories = c("N", "S"), exact = FALSE)
 ```
 
+Write to a CSV file for data input
+```{r}
+write.csv(All_data, file = "output/All_data_comp.csv")
+```
+
+Run normality on fractal dimension data
+```{r}
+shapiro.test(All_data$D)
+#looks good: W = 0.97847, p-value = 0.3062
+```
+
+Run 2-sample t-test
+```{r}
+t.test(D ~ Location, data = All_data)
+
+#t = 2.0687, df = 62.46, p-value = 0.04272
+
+#The mean D and SE between N and S sites are statistically different
+library(plotrix)
+
+mean_D <- All_data %>% select(Location, D) %>% group_by(Location) %>% summarise_if(is.numeric, mean, na.rm = TRUE)
+
+
+SE_D <- All_data %>% group_by(Location) %>% summarise(se_D=plotrix::std.error(D))
+
+sum_D <- mean_D
+
+sum_D$SE <- SE_D$se_D
+
+
+#mean_D <- mean_D %>% pivot_longer(!Location, names_to = )
+
+#library(data.table)
+#All_data1 <- setDT(All_data)
+#All_data1 <- All_data1[, c("mean", "SE") :=list(mean(D), plotrix::std.error(D)), by = Location]
+
+
+```
+
+
+Make some plots
+```{r}
+library(ggplot2)
+
+Dt <- paste("t == 2.07")
+Dp <- paste("p == 0.04")
+
+ggplot(All_data, aes(x = Location, y = D, fill = Location)) + geom_boxplot() + ylab("Fractal Dimension (D)")+ theme(panel.border = element_rect(colour = "black", fill = NA, linewidth = 1), panel.background = element_rect(fill = "white")) + annotate("text", x = 2.3, y = 2.93, label = Dt, parse = TRUE) + annotate("text", x = 2.3, y = 2.9, label = Dp, parse = TRUE)
+
+
+ggplot(sum_D, aes(x = factor(Location), y = D, fill = Location)) + 
+  geom_bar(position = "dodge", stat = "identity") + 
+  geom_errorbar(aes(ymin = D - SE, ymax = D + SE), width = 0.5) + 
+  scale_y_continuous(limits = c(2, 3), oob = scales::squish) + 
+  ylab("Mean fractal dimension (D)") + 
+  xlab("Study site") + 
+  theme(panel.border = element_rect(colour = "black", fill = NA, linewidth = 1), 
+        panel.background = element_rect(fill = "white")) + 
+  annotate("text", x = 2.3, y = 2.97, label = Dt, parse = TRUE) + 
+  annotate("text", x = 2.3, y = 2.9, label = Dp, parse = TRUE) + 
+  guides(fill=guide_legend(title="Study site"))
+
+
+```
+
+
+Load field observations
+```{r}
+obs_S <- read.csv("data/Field-obs/10-05-2023_South.csv")
+
+```
+
+
+Stats on Alert and Flight Initiation Distances, pred vs non-pred models (South Site)
+```{r}
+
+shapiro.test(obs_S$P_AD.m.)
+shapiro.test(obs_S$NP_AD.m.)
+shapiro.test(obs_S$P_FID.m.)
+shapiro.test(obs_S$NP_FID.m.)
+
+#data transformations not working move to Mann-Whitney
+
+#Alert distance predator vs non-predator model
+wilcox.test(obs_S$P_AD.m.,obs$NP_AD.m., paired = FALSE)
+
+#W = 178, p-value = 0.0495
+#medians are statistically different p-value < alpha (0.05)
+
+
+#Flight initiation distance pred vs non-pred model
+wilcox.test(obs_S$P_FID.m., obs$NP_FID.m., paired = FALSE)
+
+#W = 173.5, p-value = 0.0248
+#medians are statistically different
+
+```
+
+
+Look at predator model response distances
+```{r}
+obs_S_D <- na.omit(obs[-c(13:17)])
+
+shapiro.test(obs_S_D$D)
+#W = 0.94772, p-value = 0.3904
+
+AD_S <- lm(data = obs_S_D, log(P_AD.m.) ~ D)
+summary(AD_S)
+
+FID_S <- lm(log(P_FID.m.) ~ D, data = obs_S_D)
+summary(FID_S)
+
+```
 
 
 
