@@ -57,6 +57,7 @@ S_lagoon$ID <- gsub("C:/Users/Jgke8/ASSE_complexity/data/dems/South/", "", S_lag
 S_lagoon$ID <- gsub("Bommie_", "", S_lagoon$ID)
 ```
 
+
 Calculate RDH for North dems
 ```{r}
 
@@ -100,7 +101,7 @@ summary(All_data)
 ```
 
 
-Bin the bommies into high and low complexity
+Bin the bommies into high and low complexity (Not useful in later analyses)
 ```{r}
 #get mean fractal dimension to use as boundary for binning
 summary(All_data$D)
@@ -125,6 +126,7 @@ Write to a CSV file for data input
 ```{r}
 write.csv(All_data, file = "output/All_data_comp.csv")
 ```
+
 
 Run normality on fractal dimension data
 ```{r}
@@ -190,9 +192,14 @@ ggplot(sum_D, aes(x = factor(Location), y = D, fill = Location)) +
 Load field observations
 ```{r}
 obs_S <- read.csv("data/Field-obs/10-05-2023_South.csv")
+obs_N <- read.csv("data/Field-obs/10-06-2023_North.csv")
 
 ```
 
+
+```{r}
+All_field <- rbind(obs_N, obs_S)
+```
 
 Stats on Alert and Flight Initiation Distances, pred vs non-pred models (South Site)
 ```{r}
@@ -202,17 +209,18 @@ shapiro.test(obs_S$NP_AD.m.)
 shapiro.test(obs_S$P_FID.m.)
 shapiro.test(obs_S$NP_FID.m.)
 
+
 #data transformations not working move to Mann-Whitney
 
 #Alert distance predator vs non-predator model
-wilcox.test(obs_S$P_AD.m.,obs$NP_AD.m., paired = FALSE)
+wilcox.test(obs_S$P_AD.m.,obs_S$NP_AD.m., paired = FALSE)
 
 #W = 178, p-value = 0.0495
 #medians are statistically different p-value < alpha (0.05)
 
 
 #Flight initiation distance pred vs non-pred model
-wilcox.test(obs_S$P_FID.m., obs$NP_FID.m., paired = FALSE)
+wilcox.test(obs_S$P_FID.m., obs_S$NP_FID.m., paired = FALSE)
 
 #W = 173.5, p-value = 0.0248
 #medians are statistically different
@@ -220,23 +228,227 @@ wilcox.test(obs_S$P_FID.m., obs$NP_FID.m., paired = FALSE)
 ```
 
 
+Stats on Alert and Flight Initiation Distances, pred vs non-pred models (North Site)
+```{r}
+
+shapiro.test(obs_N$P_AD.m.)
+shapiro.test(log(obs_N$NP_AD.m.))
+shapiro.test(obs_N$P_FID.m.)
+shapiro.test(log(obs_N$NP_FID.m.))
+
+
+#data transformations not working move to Mann-Whitney
+
+#Alert distance predator vs non-predator model
+wilcox.test(obs_N$P_AD.m.,obs_N$NP_AD.m., paired = FALSE)
+
+#W = 873.5, p-value = 0.002175
+#medians are statistically different p-value < alpha (0.05)
+
+
+#Flight initiation distance pred vs non-pred model
+wilcox.test(obs_N$P_FID.m.,obs_N$NP_FID.m., paired = FALSE)
+
+#W = 891.5, p-value = 0.001053
+#medians are statistically different
+
+```
+
+Stats on Alert and Flight Initiation Distances, pred vs non-pred models (All)
+```{r}
+shapiro.test(All_field$P_AD.m.) #normal
+shapiro.test(All_field$P_FID.m.) #normal
+shapiro.test(All_field$NP_AD.m.) #normal
+shapiro.test(All_field$NP_FID.m.) #non-normal
+
+t.test(All_field$P_AD.m., All_field$NP_AD.m., paired = FALSE)
+#t = 3.6229, df = 90.797, p-value = 0.0004798 
+#Mean AD between P and NP are statistically different
+
+wilcox.test(All_field$P_FID.m., All_field$NP_FID.m., paired = FALSE)
+#W = 1817.5, p-value = 0.0002076
+#Median FID between P and NP are statistically different
+
+```
+
+
 Look at predator model response distances
 ```{r}
-obs_S_D <- na.omit(obs[-c(13:17)])
+#Re-check comparison of D between sites
 
-shapiro.test(obs_S_D$D)
-#W = 0.94772, p-value = 0.3904
+#Remove missing data from south site obs
+obs_S_r <- na.omit(obs_S)
 
-AD_S <- lm(data = obs_S_D, log(P_AD.m.) ~ D)
-summary(AD_S)
+#test normality
+shapiro.test(obs_S_r$D) #not normal
+shapiro.test(obs_N$D) #not normal
 
-FID_S <- lm(log(P_FID.m.) ~ D, data = obs_S_D)
-summary(FID_S)
+#compare medians
+wilcox.test(obs_S_r$D, obs_N$D, paired = FALSE)
+
+#W = 58, p-value = 0.0002624
+#Medians are statistically different
+```
+
+```{r}
+#make a plot
+
+ggplot(All_field, aes(x = Location, y = D, fill = Location)) + geom_boxplot() + ylab(bquote(Fractal~dimension~(D))) + theme(panel.border = element_rect(colour = "black", fill = NA, linewidth = 1), panel.background = element_rect(fill = "white")) + annotate("text", x = 2.3, y = 2.93, label = "paste(W,\" = 58\")", parse = TRUE) + annotate("text", x = 2.38, y = 2.9, label = "paste(p,\" = 2.62e-4\")", parse = TRUE)
 
 ```
 
 
 
+```{r}
+#Add Area and perimeter data
+
+S.A <- read.csv("data/gis/South_PA.csv")
+N.A <- read.csv("data/gis/North_PA.csv")
+
+All.A <- rbind(S.A, N.A)
+
+All_field.1 <- merge(All_field, All.A, by=c("ID", "Location"))
+
+#Remove rows with missing data
+All_field_D <- na.omit(All_field.1[-c(6,13:17)])
+
+```
+
+
+```{r}
+shapiro.test(All_field_D$D)
+#W = 0.98112, p-value = 0.5618
+#Fractal dimension data are non-normal
+
+AD_All <- lm(data = All_field_D, log(P_AD.m.) ~ D)
+summary(AD_All)
+#no relationship between fractal dimension and Alert Distance
+
+
+FID_All <- lm(log(P_FID.m.) ~ D, data = All_field_D)
+summary(FID_All)
+#relationship between fractal dimension and Flight Initiation Distance
+#r squared = 0.09978, p-value = 0.01214
+
+```
+
+Make some plots for regressions
+```{r}
+#Alert distances
+ggplot(All_field_D, aes(D, log(P_AD.m.))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab("log(Alert distance (m))") + xlab("Fractal dimension") + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 2.92, y = -.7, label = "paste(r ^ 2, \" = 0.004\")", parse = TRUE) + annotate("text", x = 2.92, y = -.85, label = "paste(p, \" = 0.273\")", parse = TRUE)
+
+
+#Flight Initiation distances
+lrFID <- paste("r^2 == 0.099")
+lpFID <- paste("p == 0.012")
+
+ggplot(All_field_D, aes(D, log(P_FID.m.))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab(bquote(log(Flight~initiation~distance~(m)))) + xlab(bquote(Fractal~dimension~(D))) + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 2.92, y = -.3, label = "paste(r ^ 2, \" = 0.099\")", parse = TRUE) + annotate("text", x = 2.92, y = -.45, label = "paste(p, \" = 0.012\")", parse = TRUE)
+```
+
+PCA analyses
+
+Normalize data
+```{r}
+library(corrr)
+library(ggcorrplot)
+library(FactoMineR)
+library(factoextra)
+
+
+All.field.num <- All_field_D[,c(3:8, 10, 12:13)]
+data.norm <- scale(All.field.num)
+
+head(data.norm)
+
+
+#Correlation matrix
+corr_matrix <- cor(data.norm)
+ggcorrplot(corr_matrix)
+
+```
+
+
+Applying PCA
+```{r}
+data.pca <- princomp(corr_matrix)
+summary(data.pca)
+
+
+data.pca$loadings[, 1:2]
+
+#Plot eigan values
+fviz_eig(data.pca, addlabels = TRUE)
+
+# Graph of the variables
+fviz_pca_var(data.pca, col.var = "black")
+
+fviz_cos2(data.pca, choice = "var", axes = 1:2)
+
+fviz_pca_var(data.pca, col.var = "cos2",
+            gradient.cols = c("black", "orange", "green"),
+            repel = TRUE)
+
+
+```
+
+Regression on Rugosity and response distances
+```{r}
+R.AD <- lm(data = All.field.num, log(P_AD.m.) ~ R)
+summary(R.AD)
+
+R.FID <- lm(data = All.field.num, log(P_FID.m.) ~ R)
+summary(R.FID)
+#not significant
+```
+
+Regression on fish density and response distances
+```{r}
+#add a column for fish density per bommie (#/m^2)
+All.field.num$dens <- (All.field.num$Total_fish)/(All.field.num$area)
+
+Den.AD <- lm(data = All.field.num, log(P_AD.m.)~log(dens))
+summary(Den.AD)
+#Multiple R-squared:  0.09889,	Adjusted R-squared:  0.08122 
+#F-statistic: 5.597 on 1 and 51 DF,  p-value: 0.02183
+
+
+Den.FID <- lm(data = All.field.num, log(P_FID.m.)~log(dens))
+summary(Den.FID)
+#Multiple R-squared:  0.2483,	Adjusted R-squared:  0.2336 
+#F-statistic: 16.85 on 1 and 51 DF,  p-value: 0.0001462
+```
+
+Plots
+```{r}
+#AD ~ Dens
+
+ggplot(All.field.num, aes(log(dens), log(P_AD.m.))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab(bquote(log(Alert~distance (m)))) + xlab(bquote(log(Fish~density~(individuals/m^2)))) + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 5, y = -.4, label = "paste(r ^ 2, \" = 0.081\")", parse = TRUE) + annotate("text", x = 5, y = -.55, label = "paste(p, \" = 0.022\")", parse = TRUE)
+
+
+#FID ~ Dens
+
+ggplot(All.field.num, aes(log(dens), log(P_FID.m.))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab(bquote(log(Flight~initiation~distance~(m)))) + xlab(bquote(log(Fish~density~(individuals/m^2)))) + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 5, y = -.3, label = "paste(r ^ 2, \" = 0.234\")", parse = TRUE) + annotate("text", x = 5.05, y = -.45, label = "paste(p, \" = 1.46e-4\")", parse = TRUE)
+```
 
 
 
+These relationships are statistically significant, next look at density and fractal dimension/rugosity
+
+```{r}
+FD.Den <- lm(data = All.field.num, log(dens)~log(D))
+summary(FD.Den)
+#Multiple R-squared:  0.3881,	Adjusted R-squared:  0.3761 
+#F-statistic: 32.35 on 1 and 51 DF,  p-value: 6.305e-07
+
+R.Den <- lm(data = All.field.num, log(dens)~log(R))
+summary(R.Den)
+#not significant
+```
+
+Plots
+```{r}
+#Dens ~ D
+
+ggplot(All.field.num, aes(D, log(dens))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab(bquote(log(Fish~density~(individuals/m^2)))) + xlab(bquote(Fractal~dimension~(D))) + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 2.91, y = 5.15, label = "paste(r ^ 2, \" = 0.376\")", parse = TRUE) + annotate("text", x = 2.913, y = 4.9, label = "paste(p, \" = 6.31e-7\")", parse = TRUE)
+
+```
