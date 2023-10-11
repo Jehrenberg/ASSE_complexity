@@ -20,6 +20,7 @@ library(rgdal)
 library(plot3D)
 library(dplyr)
 library(tidyverse)
+library(tidyr)
 ```
 
 Calculate RDH for South dems
@@ -173,17 +174,20 @@ Dp <- paste("p == 0.04")
 ggplot(All_data, aes(x = Location, y = D, fill = Location)) + geom_boxplot() + ylab("Fractal Dimension (D)")+ theme(panel.border = element_rect(colour = "black", fill = NA, linewidth = 1), panel.background = element_rect(fill = "white")) + annotate("text", x = 2.3, y = 2.93, label = Dt, parse = TRUE) + annotate("text", x = 2.3, y = 2.9, label = Dp, parse = TRUE)
 
 
-ggplot(sum_D, aes(x = factor(Location), y = D, fill = Location)) + 
-  geom_bar(position = "dodge", stat = "identity") + 
-  geom_errorbar(aes(ymin = D - SE, ymax = D + SE), width = 0.5) + 
-  scale_y_continuous(limits = c(2, 3), oob = scales::squish) + 
-  ylab("Mean fractal dimension (D)") + 
-  xlab("Study site") + 
-  theme(panel.border = element_rect(colour = "black", fill = NA, linewidth = 1), 
-        panel.background = element_rect(fill = "white")) + 
-  annotate("text", x = 2.3, y = 2.97, label = Dt, parse = TRUE) + 
-  annotate("text", x = 2.3, y = 2.9, label = Dp, parse = TRUE) + 
-  guides(fill=guide_legend(title="Study site"))
+ggplot(sum_D, aes(x = factor(Location), y = D)) +
+  geom_bar(position = "dodge", stat = "identity", color = "black", fill = "white") +
+  geom_errorbar(aes(ymin = D - SE, ymax = D + SE), width = 0.5) +
+  scale_y_continuous(limits = c(2, 3), oob = scales::squish) +
+  ylab("Mean fractal dimension (D)") +
+  xlab("Study site") +
+  theme(
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+    panel.background = element_rect(fill = "white")
+  ) +
+  annotate("text", x = 2.4, y = 2.97, label = Dt, parse = TRUE) +
+  annotate("text", x = 2.4, y = 2.9, label = Dp, parse = TRUE) +
+  guides(fill = guide_legend(title = "Study site"))
+
 
 
 ```
@@ -268,6 +272,52 @@ t.test(All_field$P_AD.m., All_field$NP_AD.m., paired = FALSE)
 wilcox.test(All_field$P_FID.m., All_field$NP_FID.m., paired = FALSE)
 #W = 1817.5, p-value = 0.0002076
 #Median FID between P and NP are statistically different
+
+```
+
+Plots: boxplot and bar
+```{r}
+#box for FID
+ggplot(All_field) + geom_boxplot(aes(x = "Non-predator", y = NP_FID.m.), fill = "white", color = "black") + geom_boxplot(aes(x = "Predator", y = P_FID.m.), fill = "white", color = "black") + ylab(bquote(Flight~initiation~distance~(m))) + xlab(bquote(Model~type))+ theme(panel.border = element_rect(colour = "black", fill = NA, linewidth = 1), panel.background = element_rect(fill = "white")) + annotate("text", x = 2.3, y = .78, label = "paste(W,\" = 1817.5\")", parse = TRUE) + annotate("text", x = 2.3, y = .73, label = "paste(p,\" = 2.08e-4\")", parse = TRUE) + theme(legend.position = "none")
+
+#bar for AD
+#Data prep
+mean_AD <- All_field %>% select(NP_AD.m., P_AD.m.) %>% summarise_if(is.numeric, mean, na.rm = TRUE)
+names(mean_AD)[colnames(mean_AD) == "NP_AD.m."] <- "Non-predator"
+names(mean_AD)[colnames(mean_AD) == "P_AD.m."] <- "Predator"
+
+rotated_df <- pivot_longer(mean_AD, cols = everything(), names_to = "Model_type", values_to = "Mean_dist")
+
+SE_NP_AD <- sd(All_field$NP_AD.m., na.rm = TRUE)/sqrt(sum(!is.na(All_field$NP_AD.m.)))
+
+SE_P_AD <- sd(All_field$P_AD.m., na.rm = TRUE)/sqrt(sum(!is.na(All_field$P_AD.m.)))
+
+SE_AD <- data.frame(SE = c(SE_NP_AD, SE_P_AD))
+
+sum_AD <- rotated_df
+
+sum_AD$SE <- SE_AD$SE
+
+#t = 3.6229, df = 90.797, p-value = 0.0004798 
+#Plot
+ggplot(sum_AD, aes(x = factor(Model_type), y = Mean_dist)) +
+  geom_bar(aes(fill = "white"), position = "dodge", stat = "identity", color = "black") +
+  geom_errorbar(
+    aes(ymin = Mean_dist - SE, ymax = Mean_dist + SE),
+    width = 0.5,
+    position = position_dodge(width = 0.75)
+  ) +
+  scale_fill_manual(values = "white") +  # Set the fill color to white
+  scale_y_continuous(limits = c(0, 0.4), oob = scales::squish) +
+  ylab("Mean alert distance (m)") +
+  xlab("Model type") +
+  theme(
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+    panel.background = element_rect(fill = "white"),
+    legend.position = "none"  # Remove the legend
+  ) +
+  annotate("text", x = 2.25, y = 0.38, label = "paste(t,\" = 3.62\")", parse = TRUE) +
+  annotate("text", x = 2.3, y = 0.35, label = "paste(p,\" = 4.80e-4\")", parse = TRUE)
 
 ```
 
@@ -422,7 +472,7 @@ Plots
 ```{r}
 #AD ~ Dens
 
-ggplot(All.field.num, aes(log(dens), log(P_AD.m.))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab(bquote(log(Alert~distance (m)))) + xlab(bquote(log(Fish~density~(individuals/m^2)))) + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 5, y = -.4, label = "paste(r ^ 2, \" = 0.081\")", parse = TRUE) + annotate("text", x = 5, y = -.55, label = "paste(p, \" = 0.022\")", parse = TRUE)
+ggplot(All.field.num, aes(log(dens), log(P_AD.m.))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab(bquote(log(Alert~distance (m)))) + xlab(bquote(log(Fish~density~(individuals/m^2)))) + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 5, y = -.55, label = "paste(r ^ 2, \" = 0.081\")", parse = TRUE) + annotate("text", x = 5, y = -.7, label = "paste(p, \" = 0.022\")", parse = TRUE)
 
 
 #FID ~ Dens
