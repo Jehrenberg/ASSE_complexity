@@ -269,7 +269,8 @@ t.test(All_field$P_AD.m., All_field$NP_AD.m., paired = FALSE)
 #t = 3.6229, df = 90.797, p-value = 0.0004798 
 #Mean AD between P and NP are statistically different
 
-wilcox.test(All_field$P_FID.m., All_field$NP_FID.m., paired = FALSE)
+#Mann-Whitney (sample sizes of two groups are not equal)
+FID_wil <- wilcox.test(All_field$P_FID.m., All_field$NP_FID.m., paired = FALSE)
 #W = 1817.5, p-value = 0.0002076
 #Median FID between P and NP are statistically different
 
@@ -322,7 +323,7 @@ ggplot(sum_AD, aes(x = factor(Model_type), y = Mean_dist)) +
 ```
 
 
-Look at predator model response distances
+Look at D on predator model response distances
 ```{r}
 #Re-check comparison of D between sites
 
@@ -378,7 +379,8 @@ summary(AD_All)
 FID_All <- lm(log(P_FID.m.) ~ D, data = All_field_D)
 summary(FID_All)
 #relationship between fractal dimension and Flight Initiation Distance
-#r squared = 0.09978, p-value = 0.01214
+#Multiple R-squared:  0.1171,	Adjusted R-squared:  0.09978 
+#F-statistic: 6.764 on 1 and 51 DF,  p-value: 0.01214
 
 ```
 
@@ -394,6 +396,7 @@ lpFID <- paste("p == 0.012")
 
 ggplot(All_field_D, aes(D, log(P_FID.m.))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab(bquote(log(Flight~initiation~distance~(m)))) + xlab(bquote(Fractal~dimension~(D))) + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 2.92, y = -.3, label = "paste(r ^ 2, \" = 0.099\")", parse = TRUE) + annotate("text", x = 2.92, y = -.45, label = "paste(p, \" = 0.012\")", parse = TRUE)
 ```
+
 
 PCA analyses
 
@@ -502,3 +505,113 @@ Plots
 ggplot(All.field.num, aes(D, log(dens))) + geom_point(size=3) + geom_smooth(method = "lm", se = FALSE, color = "black")+ ylab(bquote(log(Fish~density~(individuals/m^2)))) + xlab(bquote(Fractal~dimension~(D))) + theme(panel.border = element_rect(colour = "black", fill=NA, linewidth = 1), panel.background = element_rect(fill = 'white')) + annotate("text", x = 2.91, y = 5.15, label = "paste(r ^ 2, \" = 0.376\")", parse = TRUE) + annotate("text", x = 2.913, y = 4.9, label = "paste(p, \" = 6.31e-7\")", parse = TRUE)
 
 ```
+
+
+Power analyses
+```{r}
+library(pwr)
+
+#FRACTAL DIMENSION BETWEEN N & S  
+#effect size
+es_D <- (2.786604-2.746227)/0.01541155
+
+#t.test power (unequal sample sizes)
+D_power_test <- pwr.t2n.test(n1 = 31, n2 = 36, d = es_D, sig.level = 0.05, power = NULL)
+
+D_power <- D_power_test$power
+D_power
+#Power (1 - P(Type II error)) is 1 => good statistical power?
+
+
+
+#RESPONSE DISTANCE BETWEEN PRED AND NON-PRED MODELS
+
+#Alert distance
+#effect size
+es_AD <- (0.2601887-0.1793878)/0.01837856
+
+#t.test power (equal sample sizes)
+AD_pwr_t <- pwr.t2n.test(n1 = 53, n2 = 48, d = es_AD, sig.level = 0.05, power = NULL)
+
+AD_pwr <- AD_pwr_t$power
+AD_pwr
+#Power (1 - P(Type II error)) is 1 => good statistical power?
+
+
+#Flight initiation distance
+#omit NA values
+P_FID_noNA <- na.omit(All_field$P_FID.m.) #n = 53
+NP_FID_noNA <- na.omit(All_field$NP_FID.m.) #n = 48
+
+#Data prep
+mean_FID <- All_field %>% select(NP_FID.m., P_FID.m.) %>% summarise_if(is.numeric, mean, na.rm = TRUE)
+names(mean_FID)[colnames(mean_FID) == "NP_FID.m."] <- "Non-predator"
+names(mean_FID)[colnames(mean_FID) == "P_FID.m."] <- "Predator"
+
+rotated_FID_df <- pivot_longer(mean_FID, cols = everything(), names_to = "Model_type", values_to = "Mean_dist")
+
+SE_NP_FID <- sd(All_field$NP_FID.m., na.rm = TRUE)/sqrt(sum(!is.na(All_field$NP_FID.m.)))
+
+SE_P_FID <- sd(All_field$P_FID.m., na.rm = TRUE)/sqrt(sum(!is.na(All_field$P_FID.m.)))
+
+SE_FID <- data.frame(SE = c(SE_NP_FID, SE_P_FID))
+
+sum_FID <- rotated_FID_df
+
+sum_FID$SE <- SE_FID$SE
+
+#Power analysis:
+es_FID <- (0.4283019-0.3070833)/0.02270805
+FID_pwr_t <- pwr.t2n.test(n1 = 53, n2 = 48, d = es_FID, sig.level = 0.05, power = NULL)
+
+FID_pwr <- FID_pwr_t$power
+FID_pwr
+##Power (1 - P(Type II error)) is 1 => good statistical power?
+
+#REGRESSION ON FISH DENSITY AND FRACTAL DIMENSION
+#Multiple R-squared:  0.3881,	Adjusted R-squared:  0.3761 
+#F-statistic: 32.35 on 1 and 51 DF,  p-value: 6.305e-07
+f2_DFD <- ((0.3881)/(1-0.3881))
+
+DFD_pwr_t <- pwr.f2.test(u = 1, v = 51, f2 = f2_DFD, sig.level = 0.05, power = NULL)
+DFD_pwr <- DFD_pwr_t$power
+DFD_pwr
+##Power (1 - P(Type II error)) is 0.999 => good statistical power?
+
+#REGRESSION ON FID AND FRACTAL DIMENSION
+#relationship between fractal dimension and Flight Initiation Distance
+#Multiple R-squared:  0.1171,	Adjusted R-squared:  0.09978 
+#F-statistic: 6.764 on 1 and 51 DF,  p-value: 0.01214
+
+f2_FIDD <- ((0.1171)/(1-0.1171))
+
+FIDD_pwr_t <- pwr.f2.test(u = 1, v = 51, f2 = f2_FIDD, sig.level = 0.05, power = NULL)
+FIDD_pwr <- FIDD_pwr_t$power
+FIDD_pwr
+##Power (1 - P(Type II error)) is 0.74 => good statistical power?
+
+#REGRESSON ON FID AND FISH DENSITY
+#Multiple R-squared:  0.2483,	Adjusted R-squared:  0.2336 
+#F-statistic: 16.85 on 1 and 51 DF,  p-value: 0.0001462
+
+f2_FIDdens <- ((0.2483)/(1-0.2483))
+
+FIDdens_pwr_t <- pwr.f2.test(u = 1, v = 51, f2 = f2_FIDdens, sig.level = 0.05, power = NULL)
+FIDdens_pwr <- FIDdens_pwr_t$power
+FIDdens_pwr
+##Power (1 - P(Type II error)) is 0.98 => good statistical power?
+
+
+#REGRESSON ON AD AND FISH DENSITY
+#Multiple R-squared:  0.09889,	Adjusted R-squared:  0.08122 
+#F-statistic: 5.597 on 1 and 51 DF,  p-value: 0.02183
+
+f2_ADdens <- ((0.09889)/(1-0.09889))
+
+ADdens_pwr_t <- pwr.f2.test(u = 1, v = 51, f2 = f2_ADdens, sig.level = 0.05, power = NULL)
+ADdens_pwr <- ADdens_pwr_t$power
+ADdens_pwr
+##Power (1 - P(Type II error)) is 0.66 => medium-high statistical power?
+
+```
+
